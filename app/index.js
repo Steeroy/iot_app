@@ -1,42 +1,62 @@
-import React, { useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import React, { useState } from "react";
+import { Stack, useRouter } from "expo-router";
 import {
   TouchableHighlight,
   Text,
   SafeAreaView,
   ScrollView,
   StyleSheet,
-} from 'react-native';
+} from "react-native";
 
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import { Audio } from "expo-av";
 
 const Home = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const handlePress = async () => {
-    if (!isRecording) {
-      const recordingPath = AudioUtils.DocumentDirectoryPath + '/recording.wav';
-      await AudioRecorder.prepareRecordingAtPath(recordingPath, {
-        SampleRate: 44100,
-        Channels: 1,
-        AudioQuality: 'High',
-        AudioEncoding: 'wav',
-      });
-      await AudioRecorder.startRecording();
-      setIsRecording(true);
-    } else {
-      const recording = await AudioRecorder.stopRecording();
+  const [recording, setRecording] = useState();
+  const startRecording = async () => {
+    (async () => {
+      let { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Permission to access location was denied");
+        return;
+      }
+      try {
+        const recording = new Audio.Recording();
+
+        await recording.prepareToRecordAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        recording._options?.isMeteringEnabled;
+        recording.setOnRecordingStatusUpdate((status) => {
+          const scaledValue = (Number(status?.metering) + 160) / 160;
+        });
+        await recording.startAsync();
+        setRecording(recording);
+        setIsRecording(true);
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+  };
+
+  const stopRecording = async () => {
+    try {
+      await recording.stopAndUnloadAsync();
       setIsRecording(false);
+      const uri = recording.getURI();
+    } catch (error) {
+      console.error("Failed to stop recording", error);
     }
   };
 
   const router = useRouter();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FCF6F5FF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FCF6F5FF" }}>
       <Stack.Screen
         options={{
-          headerStyle: { backgroundColor: '#FCF6F5FF' },
+          headerStyle: { backgroundColor: "#FCF6F5FF" },
           headerShadowVisible: false,
-          headerTitle: '',
+          headerTitle: "",
         }}
       />
 
@@ -49,7 +69,7 @@ const Home = () => {
             underlayColor="#CCCCCC"
             activeOpacity={0.7}
             style={styles.buttonStop}
-            onPress={handlePress}
+            onPress={stopRecording}
           >
             <Text style={styles.buttonStopText}>Stop Recording</Text>
           </TouchableHighlight>
@@ -58,7 +78,7 @@ const Home = () => {
             underlayColor="#CCCCCC"
             activeOpacity={0.7}
             style={styles.button}
-            onPress={handlePress}
+            onPress={startRecording}
           >
             <Text style={styles.buttonText}>Start Recording</Text>
           </TouchableHighlight>
@@ -71,48 +91,48 @@ const Home = () => {
 const styles = StyleSheet.create({
   scrollViewContent: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FCF6F5FF',
-    height: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FCF6F5FF",
+    height: "100%",
   },
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     height: 100,
     width: 100,
-    backgroundColor: 'red',
+    backgroundColor: "red",
   },
   text: {
     fontSize: 20,
     marginVertical: 10,
-    color: '#ffffff',
+    color: "#ffffff",
   },
   button: {
-    backgroundColor: '#00203FFF',
+    backgroundColor: "#00203FFF",
     borderRadius: 8,
-    width: '80%',
+    width: "80%",
     aspectRatio: 4 / 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonStop: {
-    backgroundColor: '#F44336',
+    backgroundColor: "#F44336",
     borderRadius: 8,
-    width: '80%',
+    width: "80%",
     aspectRatio: 4 / 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     fontSize: 32,
-    color: '#ADEFD1FF',
+    color: "#ADEFD1FF",
     fontWeight: 800,
   },
   buttonStopText: {
     fontSize: 32,
-    color: '#FAFAFA',
+    color: "#FAFAFA",
     fontWeight: 800,
   },
 });
